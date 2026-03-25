@@ -470,6 +470,19 @@ document.addEventListener("DOMContentLoaded", () => {
     Object.entries(filteredActivities).forEach(([name, details]) => {
       renderActivityCard(name, details);
     });
+
+    // Highlight and scroll to a shared activity from the URL query param
+    const sharedActivity = new URLSearchParams(window.location.search).get("activity");
+    if (sharedActivity && allActivities[sharedActivity]) {
+      const cards = activitiesList.querySelectorAll(".activity-card");
+      cards.forEach((card) => {
+        const cardTitle = card.querySelector("h4");
+        if (cardTitle && cardTitle.textContent.trim() === sharedActivity) {
+          card.classList.add("activity-card-highlighted");
+          card.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      });
+    }
   }
 
   // Function to render a single activity card
@@ -569,6 +582,23 @@ document.addEventListener("DOMContentLoaded", () => {
         `
         }
       </div>
+      <div class="share-section">
+        <span class="share-label">Share:</span>
+        <div class="share-buttons">
+          <button class="share-button share-copy tooltip" data-activity="${name}" aria-label="Copy link">
+            📋
+            <span class="tooltip-text">Copy link to clipboard</span>
+          </button>
+          <button class="share-button share-email tooltip" data-activity="${name}" aria-label="Share via email">
+            ✉️
+            <span class="tooltip-text">Share via email</span>
+          </button>
+          <button class="share-button share-whatsapp tooltip" data-activity="${name}" aria-label="Share via WhatsApp">
+            💬
+            <span class="tooltip-text">Share via WhatsApp</span>
+          </button>
+        </div>
+      </div>
     `;
 
     // Add click handlers for delete buttons
@@ -587,7 +617,46 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
+    // Add click handlers for share buttons
+    activityCard.querySelector(".share-copy").addEventListener("click", () => {
+      shareActivity("copy", name, details);
+    });
+    activityCard.querySelector(".share-email").addEventListener("click", () => {
+      shareActivity("email", name, details);
+    });
+    activityCard.querySelector(".share-whatsapp").addEventListener("click", () => {
+      shareActivity("whatsapp", name, details);
+    });
+
     activitiesList.appendChild(activityCard);
+  }
+
+  // Build a shareable URL for an activity
+  function getActivityShareUrl(activityName) {
+    const url = new URL(window.location.href);
+    url.searchParams.set("activity", activityName);
+    return url.toString();
+  }
+
+  // Handle sharing an activity via different channels
+  function shareActivity(channel, name, details) {
+    const shareUrl = getActivityShareUrl(name);
+    const text = `Check out "${name}" at Mergington High School! ${details.description} Schedule: ${formatSchedule(details)}`;
+
+    if (channel === "copy") {
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        showMessage("Link copied to clipboard!", "success");
+      }).catch(() => {
+        showMessage(`Could not copy automatically. Share this link: ${shareUrl}`, "error");
+      });
+    } else if (channel === "email") {
+      const subject = encodeURIComponent(`Join me for ${name} at Mergington High!`);
+      const body = encodeURIComponent(`${text}\n\nLearn more: ${shareUrl}`);
+      window.open(`mailto:?subject=${subject}&body=${body}`, "_blank");
+    } else if (channel === "whatsapp") {
+      const message = encodeURIComponent(`${text}\n${shareUrl}`);
+      window.open(`https://wa.me/?text=${message}`, "_blank");
+    }
   }
 
   // Event listeners for search and filter
